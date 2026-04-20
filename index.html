@@ -3,50 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>海洋展示互動介面 V2</title>
+    <title>聲吶互動展示介面</title>
     <style>
+        /* 重置基本樣式並設定全螢幕 */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             background-color: #000;
-            overflow: hidden;
-            user-select: none;
+            overflow: hidden; /* 防止滾動條出現 */
+            user-select: none; /* 防止反白文字 */
         }
 
-        /* --- 第一層：全螢幕 16:9 背景 --- */
-        #full-bg-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-        }
-
-        #full-bg-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* 確保填滿 16:9 螢幕 */
-        }
-
-        /* --- 第二層：左下角 1/4 互動區 --- */
-        #interactive-zone {
-            position: absolute;
-            bottom: 10px; /* 稍微離邊緣一點比較美觀 */
-            left: 15px;
-            width: 25vw; /* 縮放至約 1/4 畫面寬度 */
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-
-        /* 聲吶影片容器 (3:2 比例) */
-        #sonar-container {
+        /* 主容器，維持 3:2 比例 */
+        #app-container {
             position: relative;
-            width: 100%;
+            height: 100%;
             aspect-ratio: 3 / 2; /* 強制 3:2 比例 */
             border-radius: 15px;
             overflow: hidden;
@@ -60,17 +33,28 @@
             object-fit: cover;
             object-position: top; /* 影片頂部置頂，不被吃掉 */
         }
+        }
 
-        /* 左下角台灣地圖 (相對於 sonar-container 定位) */
+        /* 背景影片 (聲吶畫面) */
+        #bg-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            z-index: 1;
+        }
+
+        /* 左下角台灣地圖影片 */
         #tw-video-container {
             position: absolute;
-            bottom: 5%;
-            left: 3%;
-            width: 17.5%;
-            aspect-ratio: 40 / 54.6;
-            border-radius: 10px;
+            bottom: 2%;
+            left: 2%;
+            width: 17.5%; /* 依比例大約抓取 */
+            aspect-ratio: 40 / 54.6; /* 對應你提供的物理尺寸比例 */
+            border-radius: 30px; /* 對應 5mm 圓角，視螢幕大小調整 */
             overflow: hidden;
-            z-index: 12;
+            z-index: 2;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         #tw-video {
@@ -79,22 +63,24 @@
             object-fit: cover;
         }
 
-        /* 魚類圖片彈出區 (相對於 sonar-container 定位) */
+        /* 右下角魚類圖片彈出區 */
         #popup-container {
             position: absolute;
-            bottom: 5%;
-            left: 22%;
-            width: 74%;
-            aspect-ratio: 170 / 54.6;
-            z-index: 13;
-            border-radius: 8px;
+            bottom: 2%;
+            left: 20%; /* 放在地圖右邊 */
+            width: 74%; /* 依比例大約抓取 */
+            aspect-ratio: 170 / 54.6; /* 對應你提供的物理尺寸比例 */
+            z-index: 3;
+            border-radius: 10px;
             overflow: hidden;
+            /* 動畫設定：預設為透明且位置偏下 */
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px);
             transition: opacity 0.4s ease, transform 0.4s ease;
-            pointer-events: none;
+            pointer-events: none; /* 隱藏時不阻擋點擊 */
         }
 
+            /* 當加入 .show class 時，觸發上升且變不透明的動畫 */
             #popup-container.show {
                 opacity: 1;
                 transform: translateY(0);
@@ -110,66 +96,60 @@
 </head>
 <body>
 
-    <div id="full-bg-container">
-        <video id="full-bg-video" muted autoplay loop>
-            <source src="" type="video/mp4" id="full-bg-source">
+    <div id="app-container">
+        <video id="bg-video" muted autoplay loop>
+            <source src="" type="video/mp4" id="bg-source">
         </video>
-    </div>
 
-    <div id="interactive-zone">
-        <div id="sonar-container">
-            <video id="bg-video" muted autoplay loop>
-                <source src="" type="video/mp4" id="bg-source">
+        <div id="tw-video-container">
+            <video id="tw-video" muted autoplay loop>
+                <source src="" type="video/mp4" id="tw-source">
             </video>
+        </div>
 
-            <div id="tw-video-container">
-                <video id="tw-video" muted autoplay loop>
-                    <source src="" type="video/mp4" id="tw-source">
-            </div>
-
-            <div id="popup-container">
-                <img id="popup-image" src="" alt="魚類資訊">
-            </div>
+        <div id="popup-container">
+            <img id="popup-image" src="" alt="魚類資訊">
         </div>
     </div>
 
     <script>
+        // === 1. 資料設定：在這裡填入你的四組檔案路徑 ===
         const mediaSets = [
             {
-                bgFullVideo: 'fish1.mp4', // 新增：16:9 全螢幕背景影片
-                bgVideo: 'sonar1.mp4',       // 原本的 3:2 聲吶影片
-                twVideo: 'north.mp4',
-                leftImg: 'fishnorth.png',
-                rightImg: 'north.png'
+                bgFullVideo: 'https://www.dropbox.com/scl/fi/2iagsce03e29iad9rwto9/fish1.mp4?rlkey=aiei6h3q3yx235g5271qvww3u&st=fq68wr98&raw=1', // 新增：16:9 全螢幕背景影片
+                bgVideo: 'https://www.dropbox.com/scl/fi/khjkdgx2z76r5nchn1h1q/sonar1.mp4?rlkey=x014qykudsxyfncuxen4hvogw&st=dtbqq54j&raw=1',       // 原本的 3:2 聲吶影片
+                twVideo: 'https://www.dropbox.com/scl/fi/lka63s7l1heow40lq4thr/north.mp4?rlkey=hed6vw5fuojs2zz3mx41dwa1u&st=4882grih&raw=1',
+                leftImg: 'https://www.dropbox.com/scl/fi/07wddraniwfqb98exez0t/fishnorth.png?rlkey=b5lb0ysth1djqrdffnzu0ya4s&st=6g9r4rv3&raw=1',
+                rightImg: 'https://www.dropbox.com/scl/fi/ff099efm428tjescw6biq/north.png?rlkey=ho1fhcw6vrne8bh8o295acgn5&st=tvz1kap1&raw=1'
             },
             {
-                bgFullVideo: 'fish4.mp4',
-                bgVideo: 'sonar4.mp4',
-                twVideo: 'east.mp4',
-                leftImg: 'fisheast.png',
-                rightImg: 'east.png'
+                bgFullVideo: 'https://www.dropbox.com/scl/fi/otpt41ggqx5fopthaqksc/fish4.mp4?rlkey=pz084hqo6fhcjpbmiqodllwfr&st=ndai9xx7&raw=1',
+                bgVideo: 'https://www.dropbox.com/scl/fi/xwqy50ky8kykxe2mhk8w8/sonar4.mp4?rlkey=5giyghe0a4xcnpkx1tlb0hsk2&st=bodvid4t&raw=1',
+                twVideo: 'https://www.dropbox.com/scl/fi/4fvu52hr5swlg7y2nl5bm/east.mp4?rlkey=jn8p91d76rudc200dwspiozn2&st=3gn2trqr&raw=1',
+                leftImg: 'https://www.dropbox.com/scl/fi/wt5ayz26yv4uqquywtvd9/fisheast.png?rlkey=v9o9x32q8gzd1m1zhr0phny3i&st=1y9pposb&raw=1',
+                rightImg: 'https://www.dropbox.com/scl/fi/umkcm3uoh56wj8exmeyfn/east.png?rlkey=ne40zza525cj9fkkqbr4hnal5&st=7dkwkhbd&raw=1'
             },
             {
-                bgFullVideo: 'fish3.mp4',
-                bgVideo: 'sonar3.mp4',
-                twVideo: 'south.mp4',
-                leftImg: 'fishsouth.png',
-                rightImg: 'south.png'
+                bgFullVideo: 'https://www.dropbox.com/scl/fi/kpwskhpurp5kmftomm3yu/fish3.mp4?rlkey=k07i52omtmmo77yk90s7gfnsb&st=tilui2gj&raw=1',
+                bgVideo: 'https://www.dropbox.com/scl/fi/6wss0y5hebvzxf1gfrhgn/sonar3.mp4?rlkey=udm4scoxr86qwptnz1hajkoc5&st=rvaym578&raw=1',
+                twVideo: 'https://www.dropbox.com/scl/fi/glt9e0oqbz2natvq4te0v/south.mp4?rlkey=addc6h8ru1sgcv987vbf2b7l6&st=b3ne6yip&raw=1',
+                leftImg: 'https://www.dropbox.com/scl/fi/2hksylh7ey9g0y8bou9qd/fishsouth.png?rlkey=9mbrtopdmxeytqfzk1ojnpem2&st=vm05myoi&raw=1',
+                rightImg: 'https://www.dropbox.com/scl/fi/1kh6rx865dkwrga985f8v/south.png?rlkey=9houoezfqiany57y899locae3&st=10kzaxz1&raw=1'
             },
             {
-                bgFullVideo: 'fish2.mp4',
-                bgVideo: 'sonar2.mp4',
-                twVideo: 'west.mp4',
-                leftImg: 'fishwest.png',
-                rightImg: 'west.png'
+                bgFullVideo: 'https://www.dropbox.com/scl/fi/w3leerfp0px4d1qsvgubr/fish2.mp4?rlkey=zl0jf3pmx3hvuxkgcyjukmsc5&st=9nx6evcf&raw=1',
+                bgVideo: 'https://www.dropbox.com/scl/fi/54m44pnt8tp8r8alwgq72/sonar2.mp4?rlkey=gdrxzh9s40edf81m986cnd0tz&st=fl9alg8f&raw=1',
+                twVideo: 'https://www.dropbox.com/scl/fi/48ssfgan2wgxpatjnjs9v/west.mp4?rlkey=8avr6l4k2vfy54p7dg8xcdn7g&st=d5moqxfp&raw=1',
+                leftImg: 'https://www.dropbox.com/scl/fi/qw5nqoigtt870ysg4nksq/fishwest.png?rlkey=wh2c924uca8u7b03kxpyotg57&st=ioj11a3z&raw=1',
+                rightImg: 'https://www.dropbox.com/scl/fi/kip1kd74ni6j9m5fu4jm6/west.png?rlkey=0eoalskcfqx4dn2gb77esojcw&st=l1f0uiee&raw=1'
             }
         ];
 
-        let currentSetIndex = 0;
-        let currentPopup = 'none';
+        // === 2. 狀態變數 ===
+        let currentSetIndex = 0; // 目前播放第幾組 (0~3)
+        let currentPopup = 'none'; // 'none', 'left', 'right'
 
-        const fullBgVideoNode = document.getElementById('full-bg-video');
-        const fullBgSource = document.getElementById('full-bg-source');
+        // === 3. 取得 DOM 元素 ===
         const bgVideoNode = document.getElementById('bg-video');
         const bgSource = document.getElementById('bg-source');
         const twVideoNode = document.getElementById('tw-video');
@@ -177,40 +157,41 @@
         const popupContainer = document.getElementById('popup-container');
         const popupImage = document.getElementById('popup-image');
 
+        // === 4. 初始化載入第一組影片 ===
         function loadMediaSet(index) {
             const data = mediaSets[index];
-
-            // 更新全螢幕背景
-            fullBgSource.src = data.bgFullVideo;
-            fullBgVideoNode.load();
-
-            // 更新左下角聲吶影片
             bgSource.src = data.bgVideo;
-            bgVideoNode.load();
-
-            // 更新地圖
             twSource.src = data.twVideo;
+            bgVideoNode.load(); // 重新載入影片
             twVideoNode.load();
 
+            // 切換組別時，自動收回現有的圖片
             hidePopup();
-            console.log(`切換至第 ${index + 1} 組影片`);
+            console.log(`已切換至第 ${index + 1} 組`);
         }
 
+        // === 5. 圖片彈出與收回邏輯 ===
         function togglePopup(type) {
             const data = mediaSets[currentSetIndex];
             const targetImgSrc = type === 'left' ? data.leftImg : data.rightImg;
 
+            // 情況 A：如果目前已經顯示同一張圖 -> 執行收回
             if (currentPopup === type) {
                 hidePopup();
                 return;
             }
 
+            // 情況 B：如果目前顯示的是另一張圖 -> 先收回，等待動畫結束後再換圖升起
             if (currentPopup !== 'none') {
                 hidePopup();
-                setTimeout(() => { showPopup(targetImgSrc, type); }, 400);
+                // 等待 400 毫秒 (與 CSS transition 時間一致)
+                setTimeout(() => {
+                    showPopup(targetImgSrc, type);
+                }, 400);
                 return;
             }
 
+            // 情況 C：如果目前沒有顯示任何圖 -> 直接升起
             showPopup(targetImgSrc, type);
         }
 
@@ -225,16 +206,21 @@
             currentPopup = 'none';
         }
 
-        // 監聽左鍵
-        document.addEventListener('click', () => { togglePopup('left'); });
+        // === 6. 事件監聽 ===
 
-        // 監聽右鍵
+        // 左鍵點擊：切換左鍵圖片
+        document.addEventListener('click', (e) => {
+            // 避免點擊到圖片本身時觸發，如果你希望點擊任何地方都觸發可以保留
+            togglePopup('left');
+        });
+
+        // 右鍵點擊：切換右鍵圖片，並取消預設的右鍵選單
         document.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
+            e.preventDefault(); // 阻擋瀏覽器預設右鍵選單
             togglePopup('right');
         });
 
-        // 鍵盤切換
+        // 鍵盤左右鍵切換組別
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight') {
                 currentSetIndex = (currentSetIndex + 1) % mediaSets.length;
@@ -245,21 +231,25 @@
             }
         });
 
-        // 滾輪切換
+        // 滾輪切換組別 (加入防抖機制，避免滾一次跳太多組)
         let isScrolling = false;
         document.addEventListener('wheel', (e) => {
             if (isScrolling) return;
             isScrolling = true;
-            if (e.deltaY > 0) {
+
+            if (e.deltaY > 0) { // 向下滾動
                 currentSetIndex = (currentSetIndex + 1) % mediaSets.length;
-            } else {
+            } else { // 向上滾動
                 currentSetIndex = (currentSetIndex - 1 + mediaSets.length) % mediaSets.length;
             }
             loadMediaSet(currentSetIndex);
-            setTimeout(() => { isScrolling = false; }, 800);
+
+            setTimeout(() => { isScrolling = false; }, 800); // 800毫秒內只觸發一次
         });
 
+        // 執行初始化
         loadMediaSet(currentSetIndex);
+
     </script>
 </body>
 </html>
